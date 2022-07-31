@@ -1,0 +1,266 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <title>SEA BORDER SECURITY ALERT SYSTEM (BORDER CHECK)</title>
+
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+
+      .panel {
+        display: grid;
+        padding: 0px 10px 10px;
+        width: 300px;
+      }
+
+      .addresses {
+        overflow: scroll;
+      }
+
+      .esri-view .esri-ui {
+        inset: 0 !important;
+      }
+
+      .esri-button {
+        margin-bottom: 5px;
+      }
+
+      .esri-view .esri-component.esri-attribution {
+        position: fixed;
+      }
+    </style>
+
+    <link
+      rel="stylesheet"
+      href="https://js.arcgis.com/4.20/esri/themes/light/main.css"
+    />
+    <script src="https://js.arcgis.com/4.20/"></script>
+
+    <script>
+      require([
+        "esri/rest/locator",
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/request",
+        "esri/Graphic"
+      ], (locator, Map, MapView, esriRequest, Graphic) => {
+        // Set up a locator task using the what3words Locator
+        const w3wLocator = esriRequest(
+          // First get the token for the what3words Locator
+          "https://arcgis.what3words.com/v2/arcgis/tokens",
+          {
+            method: "get",
+            query: {
+              f: "json",
+              username: "tamilmannan2020@gmail.com", // YOUR-W3W-EMAIL-ADDRESS
+              password: "V88CQGLP", // YOUR-W3W-API-KEY
+              expiration: 10
+            }
+          }
+        ).then((response) => {
+          // Create the Map
+          const map = new Map({
+            basemap: "streets-navigation-vector"
+          });
+
+          // Create the MapView
+          const view = new MapView({
+            container: "viewDiv",
+            map: map,
+            center: [12.82, 80.04],
+            zoom: 18,
+            constraints: {
+              snapToZoom: false
+            }
+          });
+          view.popup.actions = [];
+          view.popup.dockOptions = {
+            breakpoint: false,
+            buttonEnabled: false
+          };
+
+          const records = `1. ///coasters.departure.sobered<br/>2. ///transported.comprises.grills<br/>3. ///baseline.sharpens.gearbox<br/>4. ///vetoed.detains.saturate<br/>5. ///hike.basher.blackbird<br/>6. ///doorsteps.lukewarm.bleaching<br/>7. ///fallen.automatic.noises<br/>8. ///quietest.carpentry.acoustics<br/>9. ///smartly.flagged.hurrying<br/>10. ///point.witnessed.imitating`;
+
+          // Display points of interest in top-right
+          const div = document.createElement("div");
+          div.setAttribute("class", "esri-widget panel");
+          const code = document.createElement("pre");
+          code.setAttribute("class", "addresses");
+          code.innerHTML = records;
+          div.appendChild(code);
+          const button = document.createElement("button");
+          button.setAttribute("class", "esri-button");
+          button.innerHTML = "Geocode addresses";
+          div.appendChild(button);
+          const buttonClear = document.createElement("button");
+          buttonClear.setAttribute("class", "esri-button");
+          buttonClear.innerHTML = "Clear";
+          div.appendChild(buttonClear);
+
+          view.ui.add(div, "top-right");
+
+          view.when(() => {
+            geocodeAddresses();
+          });
+
+          // create url for using the what3words Locator to reverse geocode
+          const locatorUrl =
+            "https://arcgis.what3words.com/v2/arcgis/rest/services/what3words_EN_English/GeocodeServer?token=" +
+            response.data.token;
+
+          // const params = {
+          //   "records": [{
+          //     "attributes": {
+          //       "OBJECTID": 1,
+          //       "what3words": "filled.count.soap"
+          //     }
+          //   }, {
+          //     "attributes": {
+          //       "OBJECTID": 2,
+          //       "what3words": "digits.return.object"
+          //     }
+          //   }, {
+          //     "attributes": {
+          //       "OBJECTID": 3,
+          //       "what3words": "nature.undulation.busy"
+          //     }
+          //   }]
+          // }
+          const params = {
+            addresses: [
+              {
+                OBJECTID: 1,
+                what3words: "coasters.departure.sobered"
+              },
+              {
+                OBJECTID: 2,
+                what3words: "transported.comprises.grills"
+              },
+              {
+                OBJECTID: 3,
+                what3words: "baseline.sharpens.gearbox"
+              },
+              {
+                OBJECTID: 4,
+                what3words: "vetoed.detains.saturate"
+              },
+              {
+                OBJECTID: 5,
+                what3words: "hike.basher.blackbird"
+              },
+              {
+                OBJECTID: 6,
+                what3words: "doorsteps.lukewarm.bleaching"
+              },
+              {
+                OBJECTID: 7,
+                what3words: "fallen.automatic.noises"
+              },
+              {
+                OBJECTID: 8,
+                what3words: "quietest.carpentry.acoustics"
+              },
+              {
+                OBJECTID: 9,
+                what3words: "smartly.flagged.hurrying"
+              },
+              {
+                OBJECTID: 10,
+                what3words: "point.witnessed.imitating"
+              }
+            ]
+          };
+
+          button.addEventListener("click", geocodeAddresses);
+          buttonClear.addEventListener("click", clearGraphics);
+
+          // Convert incomplete address to complete address
+          function geocodeAddresses() {
+            view.graphics.removeAll();
+            locator.addressesToLocations(locatorUrl, params).then(
+              (result) => {
+                if (result.length === 0) {
+                  return;
+                }
+                result.forEach((g) => {
+                  addGraphic(g);
+                });
+                // Sort
+                const graphics = view.graphics.sort((a, b) => {
+                  return a.attributes.ResultID - b.attributes.ResultID;
+                });
+                // Zoom to addresses
+                view
+                  .goTo({
+                    target: graphics,
+                    zoom: 11
+                  })
+                  .then(() => {
+                    // Add graphics to popup and show first one
+                    view.popup.open({
+                      features: graphics.toArray(),
+                      updateLocationEnabled: true
+                    });
+                  });
+              },
+              function (error) {
+                console.log(error);
+              }
+            );
+          }
+
+          // Clear all Graphics on the maps canvas
+          function clearGraphics() {
+            view.graphics.removeAll();
+            view.popup.close();
+          }
+
+          //Show results
+          function addGraphic(result) {
+            const markerSymbol = {
+              type: "simple-marker",
+              outline: {
+                color: "white",
+                width: 1.5
+              },
+              color: "red",
+              size: "10px"
+            };
+            const graphic = new Graphic({
+              geometry: result.location,
+              symbol: markerSymbol,
+              attributes: result.attributes,
+              popupTemplate: {
+                title: "BORDER-POINT #" + result.attributes.ResultID,
+                content:
+                  "///" +
+                  result.attributes.what3words +
+                  "<br><br>" +
+                  result.attributes.Addr_type +
+                  "<br>" +
+                  result.location.x.toFixed(5) +
+                  ", " +
+                  result.location.y.toFixed(5)
+              }
+            });
+            view.graphics.add(graphic);
+          }
+        });
+      });
+    </script>
+  </head>
+
+  <body>
+    <div id="viewDiv"></div>
+  </body>
+</html>
